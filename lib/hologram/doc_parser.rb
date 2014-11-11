@@ -97,7 +97,7 @@ module Hologram
 
 
       hologram_comments.each do |comment_block|
-        block_str = comment_block[0].gsub(/^\/\//, '')
+        block_str = comment_block[0].gsub(/^\/\/\s/, '')
         block = doc_block_collection.add_doc_block(block_str, file)
 
         if (!block.nil?)
