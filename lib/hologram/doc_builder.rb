@@ -1,3 +1,5 @@
+require 'hologram/link_helper'
+
 module Hologram
   class DocBuilder
     attr_accessor :source, :destination, :documentation_assets, :dependencies, :index, :base_path, :renderer, :doc_blocks, :pages, :config_yml
@@ -31,7 +33,17 @@ module Hologram
       end
 
       FileUtils.cp_r INIT_TEMPLATE_FILES, Dir.pwd
-      new_files = ["hologram_config.yml", "doc_assets/", "doc_assets/_header.html", "doc_assets/_footer.html"]
+      new_files = [
+        "hologram_config.yml",
+        "doc_assets/",
+        "doc_assets/_header.html",
+        "doc_assets/_footer.html",
+        "code_example_templates/",
+        "code_example_templates/markdown_example_template.html.erb",
+        "code_example_templates/markdown_table_template.html.erb",
+        "code_example_templates/js_example_template.html.erb",
+        "code_example_templates/jsx_example_template.html.erb",
+      ]
       DisplayMessage.created(new_files)
     end
 
@@ -49,6 +61,8 @@ module Hologram
       @plugins = Plugins.new(options.fetch('config_yml', {}), extra_args)
       @nav_level = options['nav_level'] || 'page'
       @exit_on_warnings = options['exit_on_warnings']
+      @code_example_templates = options['code_example_templates']
+      @code_example_renderers = options['code_example_renderers']
 
       if @exit_on_warnings
         DisplayMessage.exit_on_warnings!
@@ -137,8 +151,8 @@ module Hologram
         # ignore . and .. directories and files that start with
         # underscore
         next if item == '.' or item == '..' or item.start_with?('_')
-        `rm -rf #{output_dir}/#{item}`
-        `cp -R #{doc_assets_dir}/#{item} #{output_dir}/#{item}`
+        FileUtils.rm "#{output_dir}/#{item}", :force => true
+        FileUtils.cp_r "#{doc_assets_dir}/#{item}", "#{output_dir}/#{item}"
       end
     end
 
@@ -147,8 +161,8 @@ module Hologram
         begin
           dirpath  = Pathname.new(dir).realpath
           if File.directory?("#{dir}")
-            `rm -rf #{output_dir}/#{dirpath.basename}`
-            `cp -R #{dirpath} #{output_dir}/#{dirpath.basename}`
+            FileUtils.rm_r "#{output_dir}/#{dirpath.basename}", :force => true
+            FileUtils.cp_r "#{dirpath}", "#{output_dir}/#{dirpath.basename}"
           end
         rescue
           DisplayMessage.warning("Could not copy dependency: #{dir}")
@@ -157,7 +171,10 @@ module Hologram
     end
 
     def write_docs
-      markdown = Redcarpet::Markdown.new(renderer, { :fenced_code_blocks => true, :tables => true })
+      load_code_example_templates_and_renderers
+
+      renderer_instance = renderer.new(link_helper: link_helper)
+      markdown = Redcarpet::Markdown.new(renderer_instance, { :fenced_code_blocks => true, :tables => true })
       tpl_vars = TemplateVariables.new({:categories => @categories, :config => @config_yml, :pages => @pages})
       #generate html from markdown
       @pages.each do |file_name, page|
@@ -178,6 +195,34 @@ module Hologram
           end
         end
       end
+    end
+
+    def load_code_example_templates_and_renderers
+      if @code_example_templates
+        CodeExampleRenderer::Template.path_to_custom_example_templates = real_path(@code_example_templates)
+      end
+
+      if @code_example_renderers
+        CodeExampleRenderer.path_to_custom_example_renderers = real_path(@code_example_renderers)
+      end
+
+      CodeExampleRenderer.load_renderers_and_templates
+    end
+
+    def link_helper
+      @_link_helper ||= LinkHelper.new(@pages.map { |page|
+        if not page[1][:blocks].nil?
+        {
+          name: page[0],
+          component_names: page[1][:blocks].map { |component| component[:name] }
+        }
+        else
+        {
+          name: page[0],
+          component_names: {}
+        }
+        end
+      })
     end
 
     def write_erb(file_name, content, binding)
