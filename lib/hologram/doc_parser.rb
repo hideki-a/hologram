@@ -1,6 +1,6 @@
 module Hologram
   class DocParser
-    SUPPORTED_EXTENSIONS = ['.css', '.scss', '.less', '.sass', '.styl', '.js', '.md', '.markdown', '.erb' ]
+    DEFAULT_SUPPORTED_EXTENSIONS = ['.css', '.scss', '.less', '.sass', '.styl', '.js', '.md', '.markdown', '.erb' ]
     attr_accessor :source_path, :pages, :doc_blocks, :nav_level
 
     def initialize(source_path, index_name = nil, plugins=[], opts={})
@@ -10,6 +10,9 @@ module Hologram
       @nav_level = opts[:nav_level] || 'page'
       @pages = {}
       @output_files_by_category = {}
+      @supported_extensions = DEFAULT_SUPPORTED_EXTENSIONS
+      @supported_extensions += opts[:custom_extensions] if opts[:custom_extensions]
+      @ignore_paths = opts[:ignore_paths] || []
     end
 
     def parse
@@ -44,6 +47,8 @@ module Hologram
         name = @index_name + '.html'
         if @pages.has_key?(name)
           @pages['index.html'] = @pages[name]
+          title, _ = @output_files_by_category.rassoc(name)
+          @output_files_by_category[title] = 'index.html'
         end
       end
 
@@ -69,14 +74,33 @@ module Hologram
     end
 
     def process_files(files, directory, doc_block_collection)
-      files.each do |input_file|
+
+      if !@ignore_paths.empty?
+        valid_files = files.select { |input_file|
+          @ignore_paths.select { |glob| File.fnmatch(glob, input_file) }.empty?
+        }
+      else
+        valid_files = files
+      end
+
+      valid_files.each do |input_file|
         if input_file.end_with?('md')
-          @pages[File.basename(input_file, '.md') + '.html'] = {:md => File.read("#{directory}/#{input_file}"), :blocks => []}
+          process_markdown_file("#{directory}/#{input_file}", doc_block_collection)
         elsif input_file.end_with?('erb')
           @pages[File.basename(input_file, '.erb')] = {:erb => File.read("#{directory}/#{input_file}")}
         else
           process_file("#{directory}/#{input_file}", doc_block_collection)
         end
+      end
+    end
+
+    def process_markdown_file(file, doc_block_collection)
+      file_str = File.read(file)
+
+      if file_str.match(/^-{3}\n.*hologram:\s*true.*-{3}/m)
+        doc_block_collection.add_doc_block(file_str, file)
+      else
+        @pages[File.basename(file, '.md') + '.html'] = {:md => file_str, :blocks => []}
       end
     end
 
@@ -90,7 +114,7 @@ module Hologram
         #comment, this fixes haml when using this comment style
         hologram_comments = file_str.scan(/\s*\/\/doc\s*((( [^\n]*\n)|\n)+)/).map{ |arr| [arr[0].gsub(/^[ \t]{2}/,'')] }
       else
-        hologram_comments = file_str.scan(/^\s*\/\*doc(.*?)\*\//m)
+        hologram_comments = file_str.scan(/\s*\/\*doc(.*?)\*\//m)
 
         #check if scss file has sass comments
         if hologram_comments.length == 0 and file.end_with?('.scss')
@@ -129,7 +153,7 @@ module Hologram
     end
 
     def is_supported_file_type?(file)
-      SUPPORTED_EXTENSIONS.include?(File.extname(file)) and !Dir.exists?(file)
+      @supported_extensions.include?(File.extname(file)) and !Dir.exists?(file)
     end
 
     def get_file_name(str)

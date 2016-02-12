@@ -1,8 +1,9 @@
 # Hologram
-[![Gem Version](https://badge.fury.io/rb/hologram.png)](https://rubygems.org/gems/hologram)
-[![Build Status](https://travis-ci.org/trulia/hologram.png)](https://travis-ci.org/trulia/hologram)
-[![Code Climate](https://codeclimate.com/github/trulia/hologram.png)](https://codeclimate.com/github/trulia/hologram)
-[![Dependency Status](https://gemnasium.com/trulia/hologram.png)](https://gemnasium.com/trulia/hologram)
+[![Gem Version](https://img.shields.io/gem/v/hologram.svg)](https://rubygems.org/gems/hologram)
+[![Build Status](https://img.shields.io/travis/trulia/hologram.svg)](https://travis-ci.org/trulia/hologram)
+[![Code Climate](https://img.shields.io/codeclimate/github/trulia/hologram.svg)](https://codeclimate.com/github/trulia/hologram)
+[![Dependency Status](https://img.shields.io/gemnasium/trulia/hologram.svg)](https://gemnasium.com/trulia/hologram)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
 Hologram is a Ruby gem that parses comments in your CSS and helps you
 turn them into a beautiful style guide.
@@ -163,10 +164,19 @@ Your config file needs to contain the following key/value pairs
    that they are included on your pages. A simple way to do this is to add
    `<link>` and `<script src=>` tags to the `_header.html` file.
 
+* **ignore_paths**: (optional) a **list** of paths to ignore. This can be a file
+  name or a glob. Be sure to wrap globs in double quotes to keep yaml
+  from getting too upset (ie good:"*.erb" vs bad:*.erb).
+
 * **nav_level**: (optional) Sets the level of section navigation desired.
   `section` sets it to show sub navigation in top level sections.
   `all` sets it to show sub navigation for all sections. `all` can be a bit
   much, you'll probably want `section`.
+
+* **custom_extensions**: (optional) Additional file extensions that will be
+  included in the parse. Accepts both a single value and an array. The
+  current supported file extensions are `.css`, `.scss`, `.less`, `.sass`,
+  `.styl`, `.js`, `.md`, `.markdown` and `.erb`.
 
 * **exit_on_warnings**: (optional) Hologram displays warnings when there
   are issues with your docs (e.g. if a component's parent is not found,
@@ -337,6 +347,10 @@ following keys:
   component. If this is set, the current component will be displayed as
   a section within the **parent**'s documentation, but only if it specifies
   the same **category**, or allows the **category** to be inherited from its **parent**.
+* **hologram**: (markdown only) To avoid conflicts with Jekyll and
+  other YAML+markdown formats, Markdown (`.md`) files must include a
+  `hologram: true` key/value pair in the YAML block to indicate that
+  it is intended to be processed by Hologram.
 
 For example, you might have a component with the **name** *buttons* and
 another component named *buttonSkins*. You could set the **parent** for
@@ -370,7 +384,7 @@ you probably want to include in your documentation assets folder is a
 css file that styles the "pygmentized" code examples. We use
 `github.css` which can be found along with the css we use to style code
 blocks
-[here](https://github.com/trulia/hologram-example/tree/gh-pages/hologram_assets/doc_assets/css).
+[here](https://github.com/trulia/hologram-example/tree/gh-pages/static/css).
 
 ### Custom Code Example Renderers
 
@@ -519,6 +533,8 @@ The following preprocessors/file types are supported by Hologram:
   clicking on them within hologram.
 - [Cortana](https://github.com/Yago/Cortana) is a theme for hologram. It also
   includes a handy search feature.
+- [Hologram Github Theme](https://github.com/wearecube/hologram-github-theme) is a Github Styleguide inspired theme for hologram.
+- [Voxel Hologram](https://github.com/rishabhsrao/voxel-hologram) is a minimal theme for Hologram.
 
 ## Contributing
 

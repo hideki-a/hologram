@@ -63,6 +63,8 @@ module Hologram
       @exit_on_warnings = options['exit_on_warnings']
       @code_example_templates = options['code_example_templates']
       @code_example_renderers = options['code_example_renderers']
+      @custom_extensions = Array(options['custom_extensions'])
+      @ignore_paths = options.fetch('ignore_paths', [])
 
       if @exit_on_warnings
         DisplayMessage.exit_on_warnings!
@@ -132,7 +134,9 @@ module Hologram
     end
 
     def build_docs
-      doc_parser = DocParser.new(input_dir, index, @plugins, nav_level: @nav_level)
+      doc_parser = DocParser.new(input_dir, index, @plugins, nav_level: @nav_level,
+                                                             custom_extensions: @custom_extensions,
+                                                             ignore_paths: @ignore_paths)
       @pages, @categories = doc_parser.parse
 
       if index && !@pages.has_key?(index + '.html')
@@ -151,7 +155,8 @@ module Hologram
         # ignore . and .. directories and files that start with
         # underscore
         next if item == '.' or item == '..' or item.start_with?('_')
-        FileUtils.rm "#{output_dir}/#{item}", :force => true
+        FileUtils.rm "#{output_dir}/#{item}", :force => true if File.file?("#{output_dir}/#{item}")
+        FileUtils.rm_rf "#{output_dir}/#{item}" if File.directory?("#{output_dir}/#{item}")
         FileUtils.cp_r "#{doc_assets_dir}/#{item}", "#{output_dir}/#{item}"
       end
     end
