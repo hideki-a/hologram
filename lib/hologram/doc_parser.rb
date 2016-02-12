@@ -113,6 +113,8 @@ module Hologram
         #For sass strip out leading white spaces after we get the
         #comment, this fixes haml when using this comment style
         hologram_comments = file_str.scan(/\s*\/\/doc\s*((( [^\n]*\n)|\n)+)/).map{ |arr| [arr[0].gsub(/^[ \t]{2}/,'')] }
+      elsif file.end_with?('.scss')
+        hologram_comments = file_str.scan(/^\s*\/\/doc(.*?)\/\/docend/m)
       else
         hologram_comments = file_str.scan(/\s*\/\*doc(.*?)\*\//m)
 
@@ -126,7 +128,8 @@ module Hologram
 
 
       hologram_comments.each do |comment_block|
-        block = doc_block_collection.add_doc_block(comment_block[0], file)
+        block_str = comment_block[0].gsub(/^\/\/\s/, '')
+        block = doc_block_collection.add_doc_block(block_str, file)
 
         if (!block.nil?)
           @plugins.block(block, file)
